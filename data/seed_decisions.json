@@ -1,0 +1,202 @@
+[
+  {
+    "entity": "redis.connection_pool",
+    "kind": "original",
+    "decision": "Redis connection pool size set to 50 connections per app instance.",
+    "reason": "Default unbounded connection usage was exhausting Postgres connection slots under load; 50 was chosen to cap worst-case concurrent connections to a safe margin below the Redis maxclients setting.",
+    "author": "Marcus Webb",
+    "occurred_at": "2022-11-03T14:20:00Z",
+    "evidence": "JIRA-4821"
+  },
+  {
+    "entity": "redis.connection_pool",
+    "kind": "update",
+    "decision": "Redis connection pool size raised from 50 to 200 connections per app instance.",
+    "reason": "Black Friday load testing showed the pool exhausting at 50 connections under 3x normal traffic, causing request queuing. Infra confirmed the Redis cluster comfortably supports the higher ceiling.",
+    "author": "Fatima Al-Sayed",
+    "occurred_at": "2024-06-18T09:45:00Z",
+    "evidence": "PR #2291"
+  },
+  {
+    "entity": "database.connection_timeout",
+    "kind": "original",
+    "decision": "Database connection timeout set to 30 seconds.",
+    "reason": "Analytics queries against the read replica routinely took 18-25 seconds; a shorter timeout was causing spurious failures on otherwise-healthy queries.",
+    "author": "Devon Ochoa",
+    "occurred_at": "2023-01-09T11:00:00Z"
+  },
+  {
+    "entity": "database.connection_timeout",
+    "kind": "update",
+    "decision": "Database connection timeout kept at 30 seconds after the read-replica migration.",
+    "reason": "Re-ran the analytics query load test after migrating to the new replica hardware; p99 query time is still 22 seconds, so the original constraint still holds.",
+    "author": "Priya Raman",
+    "occurred_at": "2024-09-02T16:10:00Z",
+    "evidence": "Load test report LT-2024-09"
+  },
+  {
+    "entity": "auth.token_expiry",
+    "kind": "original",
+    "decision": "Access token expiry set to 15 minutes.",
+    "reason": "Security review recommended a short-lived access token to limit the blast radius of a leaked token, with refresh handled separately.",
+    "author": "Sofia Marchetti",
+    "occurred_at": "2022-08-21T10:00:00Z",
+    "evidence": "Security review SR-2022-08"
+  },
+  {
+    "entity": "auth.token_expiry",
+    "kind": "update",
+    "decision": "Access token expiry extended from 15 minutes to 60 minutes, with silent refresh.",
+    "reason": "Support logged a steady stream of tickets about users being logged out mid-form on long pages. Extended expiry after adding refresh token rotation, which the original security review had flagged as the acceptable mitigation for a longer window.",
+    "author": "Devon Ochoa",
+    "occurred_at": "2023-12-11T13:30:00Z",
+    "evidence": "JIRA-5560"
+  },
+  {
+    "entity": "kafka.retry_policy",
+    "kind": "original",
+    "decision": "Consumer retry policy set to exponential backoff with a maximum of 5 retries.",
+    "reason": "During broker restarts, consumers retrying immediately and indefinitely amplified load on recovering brokers and delayed cluster stabilization.",
+    "author": "Marcus Webb",
+    "occurred_at": "2023-05-30T08:15:00Z"
+  },
+  {
+    "entity": "legacy_api.workaround",
+    "kind": "original",
+    "decision": "Double-encode the request body before sending to /v1/legacy/orders. Do not remove without vendor confirmation.",
+    "reason": "The vendor's gateway mis-parses single-encoded UTF-8 payloads above 2KB, silently truncating order line items. Double-encoding avoids the parser bug entirely.",
+    "author": "Anika Desai",
+    "occurred_at": "2021-02-14T09:00:00Z",
+    "evidence": "Vendor support ticket VS-88213"
+  },
+  {
+    "entity": "legacy_api.workaround",
+    "kind": "update",
+    "decision": "Workaround left in place, not yet removed.",
+    "reason": "Vendor shipped gateway v3.2 in January 2024, whose changelog states the UTF-8 parsing bug is fixed. The double-encoding workaround has not been removed or regression-tested against the new gateway version.",
+    "author": "Fatima Al-Sayed",
+    "occurred_at": "2024-03-05T15:40:00Z",
+    "evidence": "Vendor changelog, gateway v3.2"
+  },
+  {
+    "entity": "cache.ttl",
+    "kind": "original",
+    "decision": "Product page cache TTL set to 5 minutes.",
+    "reason": "Chosen after a cache-stampede incident where a very long TTL combined with simultaneous expiry caused a thundering-herd of requests to the origin. 5 minutes balances staleness against origin load.",
+    "author": "Priya Raman",
+    "occurred_at": "2022-06-10T12:00:00Z",
+    "evidence": "Incident INC-1187"
+  },
+  {
+    "entity": "upload.size_limit",
+    "kind": "original",
+    "decision": "File upload size limit set to 10MB.",
+    "reason": "Matches the load balancer's request body size cap in place at the time; anything larger was rejected upstream before reaching the application anyway.",
+    "author": "Anika Desai",
+    "occurred_at": "2022-09-17T10:30:00Z"
+  },
+  {
+    "entity": "upload.size_limit",
+    "kind": "update",
+    "decision": "Upload size limit raised from 10MB to 50MB.",
+    "reason": "Infra upgraded the load balancer configuration and confirmed it now supports request bodies up to 100MB. Raised the application limit to 50MB to satisfy customer requests for larger CSV imports while staying well under the new infra ceiling.",
+    "author": "Marcus Webb",
+    "occurred_at": "2025-02-20T14:00:00Z",
+    "evidence": "PR #3104"
+  },
+  {
+    "entity": "request.timeout",
+    "kind": "original",
+    "decision": "Client-facing request timeout set to 10 seconds.",
+    "reason": "Derived directly from the p99 latency SLO of 8 seconds plus a 2 second buffer for network variance.",
+    "author": "Sofia Marchetti",
+    "occurred_at": "2023-03-22T09:20:00Z"
+  },
+  {
+    "entity": "feature_flag.behavior",
+    "kind": "original",
+    "decision": "New feature flags default to OFF unless explicitly enabled.",
+    "reason": "Changed from the prior default-ON convention after an incomplete billing feature was accidentally exposed to 5% of users through a flag that defaulted to ON.",
+    "author": "Devon Ochoa",
+    "occurred_at": "2023-07-08T11:15:00Z",
+    "evidence": "Incident INC-1340"
+  },
+  {
+    "entity": "worker.pool_size",
+    "kind": "original",
+    "decision": "Background worker pool fixed at 8 processes per node.",
+    "reason": "Matches the 8 vCPU allocation on worker nodes at the time; one worker process per core avoided oversubscription.",
+    "author": "Fatima Al-Sayed",
+    "occurred_at": "2022-04-02T13:00:00Z"
+  },
+  {
+    "entity": "websocket.heartbeat_interval",
+    "kind": "original",
+    "decision": "WebSocket heartbeat interval set to 30 seconds.",
+    "reason": "The load balancer in front of the WebSocket tier has a 60 second idle timeout; heartbeating at 30 seconds keeps connections alive with a 2x safety margin.",
+    "author": "Priya Raman",
+    "occurred_at": "2023-10-19T10:45:00Z"
+  },
+  {
+    "entity": "payment.retry_window",
+    "kind": "original",
+    "decision": "Failed payment retries limited to 3 attempts within a 24 hour window.",
+    "reason": "Card network guidance on retry abuse recommended a bounded retry window to avoid triggering fraud-prevention holds on customer cards.",
+    "author": "Anika Desai",
+    "occurred_at": "2022-12-05T09:00:00Z",
+    "evidence": "Card network compliance memo"
+  },
+  {
+    "entity": "payment.retry_window",
+    "kind": "update",
+    "decision": "Retry window extended to 5 attempts within 72 hours.",
+    "reason": "Payments team analysis found a large share of declines are transient bank-side holds that clear within two to three days. The card network's retry-abuse guidance permits this cadence as long as attempts are spaced out, which the retry logic already does.",
+    "author": "Sofia Marchetti",
+    "occurred_at": "2024-11-14T15:20:00Z",
+    "evidence": "Payments analysis report PA-2024-11"
+  },
+  {
+    "entity": "search_index.shard_count",
+    "kind": "original",
+    "decision": "Search index split into 6 shards.",
+    "reason": "Sized for the then-current 40 million document corpus, keeping each shard under the recommended 10GB size for stable query latency.",
+    "author": "Marcus Webb",
+    "occurred_at": "2023-02-11T08:30:00Z"
+  },
+  {
+    "entity": "session.cookie_samesite",
+    "kind": "original",
+    "decision": "Session cookie SameSite attribute set to Strict.",
+    "reason": "Security audit recommendation to mitigate CSRF risk on session-authenticated endpoints.",
+    "author": "Devon Ochoa",
+    "occurred_at": "2023-08-30T10:00:00Z",
+    "evidence": "Security audit report SA-2023-08"
+  },
+  {
+    "entity": "logging.pii_redaction",
+    "kind": "original",
+    "decision": "Request logging middleware redacts email and phone number fields before writing logs.",
+    "reason": "Required by legal's compliance review to avoid storing personally identifiable information in application logs, which have a longer retention window than the database.",
+    "author": "Fatima Al-Sayed",
+    "occurred_at": "2023-01-25T09:40:00Z",
+    "evidence": "Legal compliance review CR-2023-01"
+  },
+  {
+    "entity": "db_migration.batch_size",
+    "kind": "original",
+    "decision": "Data migration batch size set to 500 rows per batch.",
+    "reason": "A prior migration run with a 5000-row batch size caused measurable replication lag on the production read replicas.",
+    "author": "Priya Raman",
+    "occurred_at": "2023-11-02T12:00:00Z",
+    "evidence": "Incident INC-1502"
+  },
+  {
+    "entity": "db_migration.batch_size",
+    "kind": "update",
+    "decision": "Batch size reduced further from 500 to 100 rows for large-table migrations.",
+    "reason": "The 500-row batch size, while fine for most tables, caused a similar replication-lag incident when applied to the 200-million-row events table. 100 rows keeps lag within acceptable bounds even on the largest tables.",
+    "author": "Anika Desai",
+    "occurred_at": "2025-05-09T11:10:00Z",
+    "evidence": "Incident INC-2077"
+  }
+]

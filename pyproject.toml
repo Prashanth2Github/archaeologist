@@ -1,0 +1,52 @@
+[project]
+name = "archaeologist"
+version = "0.1.0"
+description = "The AI that remembers why your code exists — an engineering-decision memory agent built on Hindsight."
+requires-python = ">=3.10"
+dependencies = [
+    "streamlit>=1.40",
+    "hindsight-client>=0.1",
+    "openai>=1.50",
+    "pydantic>=2.8",
+    "pydantic-settings>=2.4",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-cov>=5.0", "ruff>=0.6", "mypy>=1.11"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "C4", "RET", "ARG"]
+ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+# Test doubles intentionally implement a fixed interface; not every fake needs
+# every parameter.
+"tests/*.py" = ["ARG002"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_unused_ignores = true
+warn_redundant_casts = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+ignore_missing_imports = true
+exclude = ["^\\.venv/", "^tests/"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+markers = [
+    "integration: talks to a real Hindsight/LLM endpoint; deselected by default",
+]
